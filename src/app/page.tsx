@@ -1,28 +1,15 @@
-'use client';
-
-import React from 'react';
-import { Provider } from 'react-redux';
-import { store } from '@/store/store';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import TextAnalyzer from '@/components/core/TextAnalyzer';
-import HistoryPanel from '@/components/core/HistoryPanel';
-import ModelStatus from '@/components/core/ModelStatus';
 
 export default function Home() {
   return (
-    <Provider store={store}>
-      <div className="flex min-h-screen flex-col">
+    <main className="flex min-h-screen flex-col items-center p-4 md:p-8">
+      <div className="w-full max-w-4xl mx-auto">
         <Header />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="max-w-3xl mx-auto">
-            <ModelStatus />
-            <TextAnalyzer />
-            <HistoryPanel />
-          </div>
-        </main>
+        <TextAnalyzer />
         <Footer />
       </div>
-    </Provider>
+    </main>
   );
 }

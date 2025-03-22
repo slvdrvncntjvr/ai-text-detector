@@ -1,39 +1,30 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { TextAnalysisResult, AnalysisStatus } from '@/types/analysis';
-import { analyzerService } from '@/services/analyzerService';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { analyzeText } from '@/lib/textAnalysis';
+
+export interface AnalysisResult {
+  score: number;
+  confidence: string;
+  details: Record<string, number>;
+}
 
 interface AnalysisState {
   text: string;
-  result: TextAnalysisResult | null;
-  status: AnalysisStatus;
-  history: Array<{ text: string; result: TextAnalysisResult; timestamp: number }>;
+  isAnalyzing: boolean;
+  result: AnalysisResult | null;
   error: string | null;
 }
 
 const initialState: AnalysisState = {
   text: '',
+  isAnalyzing: false,
   result: null,
-  status: 'idle',
-  history: [],
   error: null,
 };
 
-export const analyzeText = createAsyncThunk(
-  'analysis/analyzeText',
-  async (_, { getState, rejectWithValue }) => {
-    interface RootState {
-      analysis: { text: string };
-    }
-    const { text } = (getState() as RootState).analysis;
-    if (!text.trim() || text.trim().length < 15) {
-      return rejectWithValue('Text is too short for analysis');
-    }
-    
-    try {
-      return await analyzerService.analyzeText(text);
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+export const runTextAnalysis = createAsyncThunk(
+  'analysis/runTextAnalysis',
+  async (text: string) => {
+    return analyzeText(text);
   }
 );
 
@@ -44,40 +35,27 @@ const analysisSlice = createSlice({
     setText: (state, action: PayloadAction<string>) => {
       state.text = action.payload;
     },
-    clearResult: (state) => {
+    resetAnalysis: (state) => {
       state.result = null;
-      state.status = 'idle';
       state.error = null;
-    },
-    clearHistory: (state) => {
-      state.history = [];
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(analyzeText.pending, (state) => {
-        state.status = 'loading';
+      .addCase(runTextAnalysis.pending, (state) => {
+        state.isAnalyzing = true;
         state.error = null;
       })
-      .addCase(analyzeText.fulfilled, (state, action) => {
-        state.status = 'success';
+      .addCase(runTextAnalysis.fulfilled, (state, action) => {
+        state.isAnalyzing = false;
         state.result = action.payload;
-        state.history.unshift({
-          text: state.text.slice(0, 200) + (state.text.length > 200 ? '...' : ''),
-          result: action.payload,
-          timestamp: Date.now(),
-        });
-        
-        if (state.history.length > 10) {
-          state.history = state.history.slice(0, 10);
-        }
       })
-      .addCase(analyzeText.rejected, (state, action) => {
-        state.status = 'error';
-        state.error = action.payload as string;
+      .addCase(runTextAnalysis.rejected, (state, action) => {
+        state.isAnalyzing = false;
+        state.error = action.error.message || 'Analysis failed';
       });
   },
 });
 
-export const { setText, clearResult, clearHistory } = analysisSlice.actions;
+export const { setText, resetAnalysis } = analysisSlice.actions;
 export default analysisSlice.reducer;
