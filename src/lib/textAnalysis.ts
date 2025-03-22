@@ -1,95 +1,141 @@
+// src/lib/textAnalysis.ts
 export interface AnalysisResult {
-    score: number;
-    confidence: string;
-    details: Record<string, number>;
-  }
+  score: number;
+  confidence: string;
+  details: Record<string, number>;
+  timestamp: number;
+}
+
+export function analyzeText(text: string): AnalysisResult {
+  // Compute various linguistic metrics
+  const metrics = {
+    repetitionScore: calculateRepetitionScore(text),
+    complexityScore: calculateComplexityScore(text),
+    coherenceScore: calculateCoherenceScore(text),
+    predictabilityScore: calculatePredictabilityScore(text),
+    formalityScore: calculateFormalityScore(text),
+  };
+
+  // Calculate weighted score
+  const score = (
+    metrics.repetitionScore * 0.25 +
+    metrics.complexityScore * 0.25 +
+    metrics.coherenceScore * 0.2 +
+    metrics.predictabilityScore * 0.15 +
+    metrics.formalityScore * 0.15
+  );
+
+  // Determine confidence level
+  const confidence = score > 0.7 ? "High" : score > 0.4 ? "Medium" : "Low";
+
+  return {
+    score,
+    confidence,
+    details: metrics,
+    timestamp: Date.now(),
+  };
+}
+
+function calculateRepetitionScore(text: string): number {
+  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  if (words.length < 10) return 0.5;
   
-  export function analyzeText(text: string): AnalysisResult {
-    // Get metrics for the text
-    const metrics = {
-      repetitionScore: calculateRepetitionScore(text),
-      complexityScore: calculateComplexityScore(text),
-      coherenceScore: calculateCoherenceScore(text),
-      predictabilityScore: calculatePredictabilityScore(text),
-    };
+  const uniqueWords = new Set(words);
+  const uniqueRatio = uniqueWords.size / words.length;
   
-    // Calculate overall score (weighted average)
-    const score = (
-      metrics.repetitionScore * 0.3 +
-      metrics.complexityScore * 0.3 +
-      metrics.coherenceScore * 0.2 +
-      metrics.predictabilityScore * 0.2
-    );
+  // Higher repetition (lower unique ratio) indicates AI text
+  return Math.min(0.95, Math.max(0.05, 1 - uniqueRatio * 1.5));
+}
+
+function calculateComplexityScore(text: string): number {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length <= 1) return 0.5;
   
-    // Determine confidence level
-    const confidence = score > 0.7 ? 'High' : score > 0.4 ? 'Medium' : 'Low';
+  // Calculate sentence length variance
+  const lengths = sentences.map(s => s.trim().split(/\s+/).length);
+  const avg = lengths.reduce((sum, len) => sum + len, 0) / lengths.length;
+  const variance = lengths.reduce((sum, len) => sum + Math.pow(len - avg, 2), 0) / lengths.length;
   
-    return {
-      score,
-      confidence,
-      details: metrics,
-    };
-  }
+  // Normalize variance (lower variance indicates more AI-like text)
+  const normalizedVariance = Math.min(20, variance) / 20;
+  return 1 - normalizedVariance;
+}
+
+function calculateCoherenceScore(text: string): number {
+  // Count transition words (AI tends to use more)
+  const transitionWords = [
+    "therefore", "thus", "consequently", "as a result", "hence",
+    "accordingly", "for this reason", "so", "due to", "because",
+    "since", "moreover", "furthermore", "additionally", "in addition",
+    "besides", "also", "likewise", "similarly", "in the same way"
+  ];
   
-  // Helper functions
-  function calculateRepetitionScore(text: string): number {
-    // AI text often has consistent patterns and repetitive structures
-    // This is a simplified implementation
-    const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-    const uniqueWords = new Set(words);
-    
-    // Calculate repetition (higher values indicate more AI-like text)
-    return Math.min(0.95, Math.max(0.05, 1 - (uniqueWords.size / words.length) * 1.5));
-  }
+  const lowerText = text.toLowerCase();
+  let transitionCount = 0;
   
-  function calculateComplexityScore(text: string): number {
-    // AI text often has consistent complexity patterns
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
-    if (sentences.length <= 1) return 0.5;
-    
-    // Calculate sentence length variance (lower variance indicates more AI-like text)
-    const lengths = sentences.map(s => s.trim().split(/\s+/).length);
-    const avg = lengths.reduce((sum, len) => sum + len, 0) / lengths.length;
-    const variance = lengths.reduce((sum, len) => sum + Math.pow(len - avg, 2), 0) / lengths.length;
-    const normalizedVariance = Math.min(20, variance) / 20;
-    
-    // Lower variance = higher score (more likely AI)
-    return 1 - normalizedVariance;
-  }
+  transitionWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'g');
+    const matches = lowerText.match(regex);
+    if (matches) transitionCount += matches.length;
+  });
   
-  function calculateCoherenceScore(text: string): number {
-    // AI text tends to be more coherent throughout
-    // This is a simplified implementation
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-    
-    if (paragraphs.length <= 1) return 0.5;
-    
-    // For simplicity, use a random value influenced by text length
-    // In a real implementation, you would analyze paragraph transitions
-    const textLength = text.length;
-    const seedValue = textLength % 100 / 100;
-    
-    return 0.4 + (seedValue * 0.4);
-  }
+  // Normalize by text length (words)
+  const wordCount = (lowerText.match(/\b\w+\b/g) || []).length;
+  if (wordCount < 20) return 0.5;
   
-  function calculatePredictabilityScore(text: string): number {
-    // AI text often follows predictable patterns
-    // This is a simplified implementation
-    
-    // Count common filler phrases that AI tends to use
-    const fillerPhrases = [
-      "in conclusion", "to summarize", "it is important to note", 
-      "as mentioned earlier", "in other words", "for example",
-      "in addition", "furthermore", "moreover", "however",
-      "it is worth mentioning", "it should be noted"
-    ];
-    
-    const lowerText = text.toLowerCase();
-    const fillerCount = fillerPhrases.reduce((count, phrase) => {
-      return count + (lowerText.includes(phrase) ? 1 : 0);
-    }, 0);
-    
-    // Calculate normalized score
-    return Math.min(0.9, Math.max(0.1, fillerCount / 8));
-  }
+  const transitionRatio = transitionCount / (wordCount / 100);
+  return Math.min(0.9, Math.max(0.1, transitionRatio / 2));
+}
+
+function calculatePredictabilityScore(text: string): number {
+  // Count common AI filler phrases
+  const fillerPhrases = [
+    "it is important to note", "it is worth mentioning", 
+    "it should be noted", "it is essential to", "it is crucial to",
+    "in conclusion", "to summarize", "as mentioned earlier",
+    "in other words", "for example", "in the context of"
+  ];
+  
+  const lowerText = text.toLowerCase();
+  let fillerCount = 0;
+  
+  fillerPhrases.forEach(phrase => {
+    if (lowerText.includes(phrase)) fillerCount++;
+  });
+  
+  return Math.min(0.9, Math.max(0.1, fillerCount / 6));
+}
+
+function calculateFormalityScore(text: string): number {
+  // AI text tends to be more formal
+  const informalWords = [
+    "stuff", "things", "kinda", "sorta", "yeah", "nah", "dunno", 
+    "gonna", "wanna", "gotta", "ain't", "y'all", "folks", "awesome", 
+    "cool", "super", "totally", "basically", "actually", "literally"
+  ];
+  
+  const lowerText = text.toLowerCase();
+  let informalCount = 0;
+  
+  informalWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'g');
+    const matches = lowerText.match(regex);
+    if (matches) informalCount += matches.length;
+  });
+  
+  // Calculate sentence complexity (longer sentences tend to be more formal)
+  const sentences = lowerText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length === 0) return 0.5;
+  
+  const avgSentenceLength = lowerText.length / sentences.length;
+  const normalizedLength = Math.min(avgSentenceLength / 25, 1);
+  
+  // Combine metrics (fewer informal words and longer sentences = more formal = more likely AI)
+  const wordCount = (lowerText.match(/\b\w+\b/g) || []).length;
+  if (wordCount < 20) return 0.5;
+  
+  const informalRatio = informalCount / (wordCount / 100);
+  const informalScore = 1 - Math.min(informalRatio / 5, 1);
+  
+  return (informalScore * 0.7) + (normalizedLength * 0.3);
+}
