@@ -1,13 +1,12 @@
-import { modelService } from './modelService';
 import { TextAnalysisResult } from '@/types/analysis';
 import {
   calculatePerplexity,
   calculateRepetition,
-  calculateCoherence,
-  getWordFrequency
+  calculateCoherence
 } from '@/lib/utils/textProcessing';
 import { checkPatterns } from '@/lib/ml/textFeatures';
 import { analyzeEmbedding } from '@/lib/ml/embeddingAnalysis';
+import { modelService } from './modelService';
 
 class AnalyzerService {
   async analyzeText(text: string): Promise<TextAnalysisResult> {
@@ -42,7 +41,7 @@ class AnalyzerService {
     
     // Embedding analysis
     let embeddingScore: number | null = null;
-    let embeddingExplanations: string[] = [];
+    const embeddingExplanations: string[] = [];
     
     try {
       const embedding = await modelService.getEmbedding(text);

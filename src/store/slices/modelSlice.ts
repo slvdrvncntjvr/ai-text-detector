@@ -1,12 +1,14 @@
+// src/store/slices/modelSlice.ts
+
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { ModelStatus } from '@/types/model';
+import { ModelStatus, UniversalSentenceEncoderModel } from '@/types/model';
 import { modelService } from '@/services/modelService';
 
 interface ModelState {
   status: ModelStatus;
-  instance: any | null;
+  instance: UniversalSentenceEncoderModel | null;
   error: string | null;
-}
+} // <-- Add this closing brace
 
 const initialState: ModelState = {
   status: 'notLoaded',
@@ -29,7 +31,7 @@ const modelSlice = createSlice({
   name: 'model',
   initialState,
   reducers: {
-    setModel: (state, action: PayloadAction<any>) => {
+    setModel: (state, action: PayloadAction<UniversalSentenceEncoderModel>) => {
       state.instance = action.payload;
     },
   },

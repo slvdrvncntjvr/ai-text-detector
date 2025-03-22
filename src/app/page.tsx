@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store/store';
 import Header from '@/components/layout/Header';

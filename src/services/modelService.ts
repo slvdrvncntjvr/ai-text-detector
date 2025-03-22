@@ -1,15 +1,16 @@
 import * as tf from '@tensorflow/tfjs';
-import { load as loadUSE } from '@tensorflow-models/universal-sentence-encoder';
 
 class ModelService {
   private model: any = null;
   private loadPromise: Promise<any> | null = null;
 
   constructor() {
-    tf.enableProdMode();
-    tf.ready().then(() => {
-      tf.tensor([1, 2, 3]).dispose();
-    });
+    if (typeof window !== 'undefined') {
+      tf.enableProdMode();
+      tf.ready().then(() => {
+        tf.tensor([1, 2, 3]).dispose();
+      });
+    }
   }
 
   async loadModel(): Promise<any> {

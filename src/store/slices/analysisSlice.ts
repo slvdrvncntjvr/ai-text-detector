@@ -21,7 +21,10 @@ const initialState: AnalysisState = {
 export const analyzeText = createAsyncThunk(
   'analysis/analyzeText',
   async (_, { getState, rejectWithValue }) => {
-    const { text } = (getState() as any).analysis;
+    interface RootState {
+      analysis: { text: string };
+    }
+    const { text } = (getState() as RootState).analysis;
     if (!text.trim() || text.trim().length < 15) {
       return rejectWithValue('Text is too short for analysis');
     }
