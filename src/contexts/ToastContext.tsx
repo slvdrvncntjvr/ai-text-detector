@@ -1,59 +1,54 @@
-// src/contexts/ToastContext.tsx
-'use client';
+// src/context/ToastContext.tsx
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import ToastContainer, { ToastItem } from '../components/ui/toast/ToastContainer';
+import { ToastPosition } from '../components/ui/toast/Toast';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import Toast, { ToastType } from '@/components/ui/Toast';
-
-interface ToastMessage {
-  id: string;
-  type: ToastType;
-  message: string;
-  duration?: number;
+interface ToastContextProps {
+  showToast: (message: string, type?: ToastItem['type'], duration?: number) => void;
+  hideToast: (id?: string) => void; // Make id optional
+  position: ToastPosition;
+  setPosition: (position: ToastPosition) => void;
 }
 
-interface ToastContextType {
-  showToast: (type: ToastType, message: string, duration?: number) => void;
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastContext = createContext<ToastContextProps | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [position, setPosition] = useState<ToastPosition>('top-right');
 
-  const showToast = useCallback((type: ToastType, message: string, duration = 5000) => {
-    const id = Math.random().toString(36).substring(2, 9);
+  const showToast = useCallback((message: string, type: ToastItem['type'] = 'info', duration = 3000) => {
+    const id = uuidv4();
+    const newToast: ToastItem = { id, message, type, duration };
     
-    setToasts(prev => [...prev, { id, type, message, duration }]);
+    setToasts((prevToasts) => [...prevToasts, newToast]);
+    
+    if (duration > 0) {
+      setTimeout(() => {
+        hideToast(id);
+      }, duration);
+    }
+    
+    return id;
   }, []);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+  const hideToast = useCallback((id?: string) => {
+    if (!id) return; // Handle the case when id is undefined
+    setToasts((prevToasts) => prevToasts.filter(toast => toast.id !== id));
   }, []);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, hideToast, position, setPosition }}>
       {children}
-      <div className="toast-container">
-        {toasts.map(toast => (
-          <Toast
-            key={toast.id}
-            type={toast.type}
-            message={toast.message}
-            duration={toast.duration}
-            onClose={() => removeToast(toast.id)}
-          />
-        ))}
-      </div>
+      <ToastContainer toasts={toasts} position={position} onRemove={hideToast} />
     </ToastContext.Provider>
   );
 };
 
-export const useToast = (): ToastContextType => {
+export const useToast = (): ToastContextProps => {
   const context = useContext(ToastContext);
-  
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
   }
-  
   return context;
 };
